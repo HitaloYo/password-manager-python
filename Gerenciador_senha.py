@@ -1,63 +1,74 @@
-import random
+"""Gerador de senhas no terminal.
 
-# Definindo os tipos de caracteres
-min = 'abcdefghijklmnopqrstuvwxyz'
-max = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-num = '0123456789'
-sybs = '[]{}()*#;/,-_%'
+Usa o módulo `secrets`, feito para gerar valores imprevisíveis (o `random`
+não serve para senhas: a sequência dele pode ser prevista).
+"""
+import secrets
+import string
 
-# Função para gerar senha aleatória
-def gerar_senha(completa, tamanho):
-    return ''.join(random.choice(completa) for _ in range(tamanho))
+MINUSCULAS = string.ascii_lowercase
+MAIUSCULAS = string.ascii_uppercase
+NUMEROS = string.digits
+SIMBOLOS = '[]{}()*#;/,-_%'
 
-# Função para validar entrada
-def validar_entrada():
+TIPOS = {
+    '1': ('Senha completa', [MINUSCULAS, MAIUSCULAS, NUMEROS, SIMBOLOS]),
+    '2': ('Senha com maiúsculas e números', [MAIUSCULAS, NUMEROS]),
+    '3': ('Senha com minúsculas e maiúsculas', [MINUSCULAS, MAIUSCULAS]),
+}
+
+
+def gerar_senha(grupos, tamanho):
+    """Gera a senha garantindo pelo menos um caractere de cada grupo."""
+    if tamanho < len(grupos):
+        raise ValueError(f'O tamanho mínimo para esse tipo é {len(grupos)}.')
+    todos = ''.join(grupos)
+    senha = [secrets.choice(g) for g in grupos]
+    senha += [secrets.choice(todos) for _ in range(tamanho - len(grupos))]
+    # Embaralha para os caracteres obrigatórios não ficarem sempre no início.
+    for i in range(len(senha) - 1, 0, -1):
+        j = secrets.randbelow(i + 1)
+        senha[i], senha[j] = senha[j], senha[i]
+    return ''.join(senha)
+
+
+def ler_tamanho():
     while True:
         try:
-            qnt = int(input('Digite o tamanho da senha: '))
-            if qnt <= 0:
-                print("O tamanho da senha deve ser maior que 0.")
-            else:
-                return qnt
+            tamanho = int(input('Digite o tamanho da senha: '))
         except ValueError:
-            print("Por favor, insira um número válido.")
+            print('Por favor, insira um número válido.')
+            continue
+        if tamanho <= 0:
+            print('O tamanho da senha deve ser maior que 0.')
+        else:
+            return tamanho
 
-# Menu de opções
+
 def menu():
-    print("Escolha o tipo de senha a ser gerada:")
-    print("1 - Senha completa (minúsculas, maiúsculas, números e símbolos)")
-    print("2 - Senha com maiúsculas e números")
-    print("3 - Senha com minúsculas e maiúsculas")
-    print("4 - Sair")
-    
-    opcao = input("Digite a opção desejada: ")
-    
-    return opcao
+    print('\nEscolha o tipo de senha a ser gerada:')
+    for opcao, (nome, _) in TIPOS.items():
+        print(f'{opcao} - {nome}')
+    print('4 - Sair')
+    return input('Digite a opção desejada: ').strip()
 
-# Gerar senhas com base na opção escolhida
-def gerar_senhas(opcao, tamanho):
-    if opcao == '1':
-        senha = gerar_senha(min + max + num + sybs, tamanho)
-        print("Senha completa: ", senha)
-    elif opcao == '2':
-        senha = gerar_senha(max + num, tamanho)
-        print("Senha maiúsculas e números: ", senha)
-    elif opcao == '3':
-        senha = gerar_senha(min + max, tamanho)
-        print("Senha minúsculas e maiúsculas: ", senha)
-    else:
-        print("Opção inválida. Tente novamente.")
 
-# Execução principal
 def main():
-    tamanho = validar_entrada()
-    
+    tamanho = ler_tamanho()
     while True:
         opcao = menu()
         if opcao == '4':
-            print("Saindo...")
+            print('Saindo...')
             break
-        gerar_senhas(opcao, tamanho)
+        if opcao not in TIPOS:
+            print('Opção inválida. Tente novamente.')
+            continue
+        nome, grupos = TIPOS[opcao]
+        try:
+            print(f'{nome}: {gerar_senha(grupos, tamanho)}')
+        except ValueError as erro:
+            print(erro)
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     main()

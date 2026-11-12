@@ -1,63 +1,74 @@
-import random
+"""Terminal password generator (English version of Gerenciador_senha.py).
 
-# Defining character types
-min = 'abcdefghijklmnopqrstuvwxyz'
-max = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-num = '0123456789'
-sybs = '[]{}()*#;/,-_%'
+Uses the `secrets` module, which is meant for unpredictable values
+(`random` is not suitable for passwords: its sequence can be predicted).
+"""
+import secrets
+import string
 
-# Function to generate a random password
-def generate_password(characters, length):
-    return ''.join(random.choice(characters) for _ in range(length))
+LOWERCASE = string.ascii_lowercase
+UPPERCASE = string.ascii_uppercase
+DIGITS = string.digits
+SYMBOLS = '[]{}()*#;/,-_%'
 
-# Function to validate input
-def validate_input():
+TYPES = {
+    '1': ('Full password', [LOWERCASE, UPPERCASE, DIGITS, SYMBOLS]),
+    '2': ('Password with uppercase and numbers', [UPPERCASE, DIGITS]),
+    '3': ('Password with lowercase and uppercase', [LOWERCASE, UPPERCASE]),
+}
+
+
+def generate_password(groups, length):
+    """Generates the password with at least one character from each group."""
+    if length < len(groups):
+        raise ValueError(f'Minimum length for this type is {len(groups)}.')
+    pool = ''.join(groups)
+    password = [secrets.choice(g) for g in groups]
+    password += [secrets.choice(pool) for _ in range(length - len(groups))]
+    # Shuffle so the required characters are not always at the start.
+    for i in range(len(password) - 1, 0, -1):
+        j = secrets.randbelow(i + 1)
+        password[i], password[j] = password[j], password[i]
+    return ''.join(password)
+
+
+def read_length():
     while True:
         try:
             length = int(input('Enter the password length: '))
-            if length <= 0:
-                print("Password length must be greater than 0.")
-            else:
-                return length
         except ValueError:
-            print("Please enter a valid number.")
+            print('Please enter a valid number.')
+            continue
+        if length <= 0:
+            print('Password length must be greater than 0.')
+        else:
+            return length
 
-# Options menu
+
 def menu():
-    print("Choose the type of password to generate:")
-    print("1 - Full password (lowercase, uppercase, numbers, and symbols)")
-    print("2 - Password with uppercase and numbers")
-    print("3 - Password with lowercase and uppercase")
-    print("4 - Exit")
-    
-    option = input("Enter your choice: ")
-    
-    return option
+    print('\nChoose the type of password to generate:')
+    for option, (name, _) in TYPES.items():
+        print(f'{option} - {name}')
+    print('4 - Exit')
+    return input('Enter your choice: ').strip()
 
-# Generate passwords based on the chosen option
-def generate_passwords(option, length):
-    if option == '1':
-        password = generate_password(min + max + num + sybs, length)
-        print("Full password: ", password)
-    elif option == '2':
-        password = generate_password(max + num, length)
-        print("Password with uppercase and numbers: ", password)
-    elif option == '3':
-        password = generate_password(min + max, length)
-        print("Password with lowercase and uppercase: ", password)
-    else:
-        print("Invalid option. Please try again.")
 
-# Main execution
 def main():
-    length = validate_input()
-    
+    length = read_length()
     while True:
         option = menu()
         if option == '4':
-            print("Exiting...")
+            print('Exiting...')
             break
-        generate_passwords(option, length)
+        if option not in TYPES:
+            print('Invalid option. Please try again.')
+            continue
+        name, groups = TYPES[option]
+        try:
+            print(f'{name}: {generate_password(groups, length)}')
+        except ValueError as error:
+            print(error)
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     main()
